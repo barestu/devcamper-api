@@ -1,5 +1,6 @@
 const ErrorResponse = require('../utils/ErrorResponse');
 const asyncHandler = require('../middleware/asyncHandler');
+const geocoder = require('../utils/geocoder');
 const Bootcamp = require('../models/Bootcamp');
 
 /**
@@ -12,7 +13,6 @@ exports.getBootcamps = asyncHandler(async (req, res, next) => {
 
   res.status(200).json({
     status: true,
-    message: 'Show all bootcamps',
     count: bootcamps.length,
     data: bootcamps
   });
@@ -32,7 +32,6 @@ exports.getBootcamp = asyncHandler(async (req, res, next) => {
 
   res.status(200).json({
     status: true,
-    message: `Show bootcamp ${req.params.id}`,
     data: bootcamp
   });
 });
@@ -47,7 +46,6 @@ exports.createBootcamp = asyncHandler(async (req, res, next) => {
 
   res.status(201).json({
     status: true,
-    message: 'Create new bootcamp',
     data: bootcamp
   });
 });
@@ -69,7 +67,6 @@ exports.updateBootcamp = asyncHandler(async (req, res, next) => {
 
   res.status(200).json({
     status: true,
-    message: `Update bootcamp ${req.params.id}`,
     data: bootcamp
   });
 });
@@ -88,7 +85,38 @@ exports.deleteBootcamp = asyncHandler(async (req, res, next) => {
 
   res.status(200).json({
     status: true,
-    message: `Delete bootcamp ${req.params.id}`,
     data: {}
+  });
+});
+
+/**
+ * @desc    Get bootcamps within a radius
+ * @route   GET /api/v1/bootcamps/radius/:zipcode/:distance
+ * @access  Private
+ */
+exports.getBootcampsInRadius = asyncHandler(async (req, res, next) => {
+  const { zipcode, distance } = req.params;
+
+  const loc = await geocoder.geocode(zipcode);
+  const latitude = loc[0].latitude;
+  const longitue = loc[0].longitude;
+
+  /**
+   * Calculate radius using radians
+   * Divide distance by radius of earth
+   * Earth radius = 3963 miles / 6378 km
+   */
+  const radius = distance / 6378;
+
+  const bootcamps = await Bootcamp.find({
+    location: {
+      $geoWithin: { $centerSphere: [[longitue, latitude], radius] }
+    }
+  });
+
+  res.status(200).json({
+    status: true,
+    count: bootcamps.length,
+    data: bootcamps
   });
 });
