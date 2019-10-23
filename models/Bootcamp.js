@@ -37,9 +37,7 @@ const bootcampSchema = new mongoose.Schema(
       required: [true, 'Address is required']
     },
     location: {
-      /**
-       * GeoJSON Point
-       */
+      // GeoJSON Point
       type: {
         type: String,
         enum: ['Point']
@@ -56,9 +54,7 @@ const bootcampSchema = new mongoose.Schema(
       zipCode: String
     },
     careers: {
-      /**
-       * Array of string
-       */
+      // Array of string
       type: [String],
       required: true,
       enum: [
@@ -98,7 +94,9 @@ const bootcampSchema = new mongoose.Schema(
     }
   },
   {
-    timestamps: true
+    timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true }
   }
 );
 
@@ -130,6 +128,25 @@ bootcampSchema.pre('save', async function(next) {
   // Do not save address in DB
   this.address = undefined;
   next();
+});
+
+/**
+ * Cascade delete courses when a bootcamp is deleted
+ */
+bootcampSchema.pre('remove', async function(next) {
+  console.log(`Courses being removed from bootcamp ${this._id}`);
+  await this.model('Course').deleteMany({ bootcamp: this._id });
+  next();
+});
+
+/**
+ * Reverse populate with virtuals
+ */
+bootcampSchema.virtual('courses', {
+  ref: 'Course',
+  localField: '_id',
+  foreignField: 'bootcamp',
+  justOne: false
 });
 
 module.exports = mongoose.model('Bootcamp', bootcampSchema);
