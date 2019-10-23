@@ -1,43 +1,39 @@
+const path = require('path');
 const express = require('express');
 const dotenv = require('dotenv');
 const morgan = require('morgan');
 const colors = require('colors');
+const fileUpload = require('express-fileupload');
 const connectDB = require('./config/db');
 const errorHandler = require('./middleware/errorHandler');
 
-/**
- * Load env vars
- */
+// Load env vars
 dotenv.config({ path: './config/config.env' });
 
-/**
- * Connect to database
- */
+// Connect to database
 connectDB();
 
-/**`
- * Route files
- */
+//  Route files
 const bootcamps = require('./routes/bootcamps');
 const courses = require('./routes/courses');
 
 const app = express();
 
-/**
- * Body parser
- */
+// Body parser
 app.use(express.json());
 
-/**
- * Dev logging middleware
- */
+// Dev logging middleware
 if (process.env.NODE_ENV === 'development') {
   app.use(morgan('dev'));
 }
 
-/**
- * Mount routers
- */
+// File uploading
+app.use(fileUpload());
+
+// Set static folder
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Mount routers
 app.use('/api/v1/bootcamps', bootcamps);
 app.use('/api/v1/courses', courses);
 
@@ -50,13 +46,10 @@ const server = app.listen(PORT, () => {
   console.log(`Server running in ${NODE_ENV} mode on port ${PORT}`.yellow.bold);
 });
 
-/**
- * Handle undhandled promise rejections
- */
+// Handle undhandled promise rejections
 process.on('unhandledRejection', (err, promise) => {
   console.log(`Error: ${err.message}`.red);
-  /**
-   * Close server and exit process
-   */
+  // * Close server and exit process
+
   server.close(() => process.exit(1));
 });
