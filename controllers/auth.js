@@ -2,6 +2,30 @@ const ErrorResponse = require('../utils/ErrorResponse');
 const asyncHandler = require('../middleware/asyncHandler');
 const User = require('../models/User');
 
+// Get token from model, create cookie and send response
+const sendTokenResponse = ({ user, statusCode, res }) => {
+  const token = user.getSignedJwtToken();
+
+  const options = {
+    expires: new Date(
+      Date.now + process.env.JWT_COOKIE_EXPIRE * 24 * 60 * 60 * 1000
+    ),
+    httpOnly: true
+  };
+
+  if (process.env.NODE_ENV === 'production') {
+    options.secure = true;
+  }
+
+  res
+    .status(statusCode)
+    .cookie('token', token, options)
+    .json({
+      success: true,
+      token
+    });
+};
+
 /**
  * @desc    Register user
  * @route   POST /api/v1/auth/register
@@ -59,26 +83,16 @@ exports.login = asyncHandler(async (req, res, next) => {
   });
 });
 
-// Get token from model, create cookie and send response
-const sendTokenResponse = ({ user, statusCode, res }) => {
-  const token = user.getSignedJwtToken();
+/**
+ * @desc    Get current logged in user
+ * @route   GET /api/v1/auth/me
+ * @access  Private
+ */
+exports.getMe = asyncHandler(async (req, res, next) => {
+  const user = await User.findById(req.user.id);
 
-  const options = {
-    expires: new Date(
-      Date.now + process.env.JWT_COOKIE_EXPIRE * 24 * 60 * 60 * 1000
-    ),
-    httpOnly: true
-  };
-
-  if (process.env.NODE_ENV === 'production') {
-    options.secure = true;
-  }
-
-  res
-    .status(statusCode)
-    .cookie('token', token, options)
-    .json({
-      success: true,
-      token
-    });
-};
+  res.status(200).json({
+    status: true,
+    data: user
+  });
+});
